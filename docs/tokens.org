@@ -1,0 +1,28 @@
+#+title: A tokenizer in Haskell
+
+* Abstract
+Me wanna practicey
+Me like tokenizers
+Me practicey with tokenizers
+
+
+* Implementatio
+** Quelle est une token?
+qui come token metteremo
+ - simboli o numeri, sperati da spazi
+ - simboli speciali (che per ora saranno ~,~, ~;~, ~:~, ~::~, ~:::~, ~->~), anche non interrotti da spazi, in caso di ambigiutà si va col simbolo più grosso
+   - i simboli in questione sono stati scelti, in buona parte, ai fini di obbligarmi a fare la selezione dei token speciali nel modo più generico possibile, in modo da poter utilizzare al posto di questi qualsiasi altro insieme di token speciali
+
+** Como estrarre?
+ai fini di farmi male, proviamo a fare qualcosa di "point free", o quanto più possibile point free.
+
+cominciamo con la signature del top dawg
+#+begin_src haskell
+  tokens :: [Char] -> [[Char]]
+#+end_src
+e sappiano per certo (in caso) che
+#+begin_src haskell
+  tokens [] = []
+#+end_src
+e mo?
+

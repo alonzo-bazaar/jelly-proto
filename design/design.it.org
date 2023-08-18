@@ -1,0 +1,100 @@
+#+title: Jelly: Java embeddable lisp intepreter
+
+pardon per la /libertà artistica/ nella scelta e validità dell'acronimo
+* Idea Generale
+Lo scopo è quello di creare un interpreter per lisp che possa essere utilizzato per i cazzi sua o invocato da un app java, l'idea è quella di poter utilizzare questo, tramite una qualche =FFI= (=Foreign Function Interface=), per offrire funzionalità di scripting all'interno dell'app java, in modo non dissimile a quanto si possa fare con un python o un clojure.
+Questo, si ritiene, non sarebbe niente male come strumento per la configurazione, senza bisogno di re-build, di sistemi complessi (si pensi alla configurazione di un server, o a uno script-fu stile gimp, a un actionscript, ...), o per permettere un utilizzo interattivo stile [[https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop][REPL]] del sistema, strumento molto utile durante fasi di prototipazione, e utilizzabile anche per un testing preliminare (considerando che tra lo scriverlo e il testarlo con una shell passano 10 secondi).
+Quest'ultimo, in quanto per essere fatto bene richiederebbe anche un minimo di integrazione, o api per integrazione, con editor/ide, non sarà fatto bene.
+
+Il design è vagamente influenzato da [[https://gitlab.com/embeddable-common-lisp/ecl/][ecl]], per quanto Jelly non contenga un compiler da lisp a java, visto che non sono ancora a quei livelli.
+
+* Componenti
+** Lisp objects
+In lisp tutto ha un valore di ritorno, nell'ambito di =Jelly= questo sarà un oggetto che implementa l'interfaccia ~LispObject~ (o ~LispValue~, devo decidermi sul nome), visto che in lisp /le variabili non hanno un tipo, e sono invece i valori che hanno un tipo/[fn::per citare Paul Graham alla cazzo di cane più totale] le implementazioni di ~LispObject~ terranno qualche attributo di tipo.
+
+*** Tipizzazione
+Questo è un po' un problema al momento, non ho ancora visto come farlo.
+
+** Funzioni
+Da vedere poi se rappresentare le funzioni come oggetti che implementano ~LispCallable~
+comunque se lo rappresenti con un ~LispCallable~ poi vedi se vuoi mettere il lexenv (che grazialcazzo che lo facciamo con scope lessicale) all'interno del callable o meno.
+
+Vedere inoltre per quanto riguarda le funzioni builtin, si potrebbe avere un =isBuiltin= e un =callBuiltin= e magari quelli non implementano il callable, mentre lo potrebbero implementare funzioni user defined
+perchè onestamente re-implementare callable per
+ - ~cons~ 
+ - ~car~ 
+ - ~cdr~ 
+ - (probabile) ~or~ 
+ - (probabile) ~and~ 
+ - (probabile) ~if~ 
+ - et cetera res
+   
+mi sembra pessimo design.
+
+** Runtime
+Per quanto, almeno inizialmente, molte funzionalità di runtime saranno lasciate al runtime di java[fn::che ci cazzo si mette a scrivere garbage collector per 6 crediti], sarà comunque necessario rappresentare in qualche modo lo stato della "lisp machine" embedded, con questo si intende l'ambiente di variabili/valori/funzioni presenti, e lo stato della computazione[fn::daje che si esagera coi termini qui] in corso.
+Il runtime sarà inoltre utilizzabile come "handle" al sistema lisp interno per chiamare le funzionalità di questo all'interno dell'app java.
+*** NON
+ - Non è previsto, per adesso, un meccanismo di multithreading.
+ - Non è previsto, per adesso, un meccanismo di gestione delle eccezioni. (poi ovvio che il codice java avrà delle eccezioni)
+ - Non è ancora deciso se implementare il runtime come singleton[fn::come con il rutime di java, che è unico all'interno dell'applicazione] o meno.
+
+* Verso una qualche idea di interfaccia
+Lavorare verso l'implementare una qualche interfaccia prestabilita funziona spesso meglio dell lavorare verso un'idea generica di funzionamento, specie nell'ambito della programmazione a oggetti, (si vada a vedere ad esempio la sezione [[https://github.com/google/gson#goals][goals]] di [[https://github.com/google/gson][gson]])
+
+** Load, Eval, forse Apply
+Il Runtime esporrà i seguenti metodi come pubblici
+ - ~LispObject load()~ :: accetta un file/filepath e valuta(intepreta) il file/espressione data, modificando lo stato interno del runtime, aggiungendo ad esempio definizioni al vocabolario/stato interno del sistema, o modificando eventuali flag di errore (cosa che potrebbe o non potrebbe essere disgiunta dal modificare il vocabolario del sistema). Ritorna il valore dell'ultima form valutata nel toplevel del file
+ - ~LispObject eval()~ :: valuta una form data, modificando eventualmente lo stato del sistema, ritorna il valore ritornato dalla valutazione della form, probabilmente si farà anche l'overload per accettare stringhe che poi internametne sarà un
+   #+begin_src java
+     import somepackage.Form;
+
+     public class LispRuntime {
+         /* ... */
+         public LispObject eval(LispForm lf) {
+             /* ... */
+         }
+         public LispObject eval(String s) {
+             this.eval(Form.parseFromString(s));
+         }
+         /* ... */
+     }
+   #+end_src
+
+
+ - ~LispObject apply(LispCallable lc, arglist)~[fn::da decidere se inserirlo o meno] :: chiama il ~LispCallable~ (funzoine) ~lc~ con argomenti ~arglist~, ritorna il valore ritornato dall'applicazione
+
+*** Particolari per file/batch
+Tutto coperto da ~load()~ per adesso, ~eval()~ se proprio si vuole esagerare
+
+*** Particolari per REPL
+Probabilmente invocato attraverso un ~Runtime.repl()~, anche se facilmente spostabile a un qualche altro oggetto che comunicherà comunque col runtime, il repl agirà nel seguente modo
+ - read ::
+   - accetta caratteri finchè non si ha una form completa (bilanciamento (o assenza) di parentesi alla fine di un token)
+   - traduce i caratteri ricevuti in form per essere valutata
+ - eval :: valuta la form letta dal passo =read=, la cosa può anche produrre side effect quali stampa di caratteri, apertura/creazione/modifica di file, et al
+ - print :: stampa il valore ottenuto dalla valutazione
+ - loop :: torna al passo =read= (a meno che la valutazoine della form non implichi anche l'arresto del loop)
+
+* Struttura dell'interpreter
+L'interpreter ha il ruolo di passare da una rappresentazione testuale del programma all'aver fatto qualcosa, questo sarà diviso in due componenti
+la struttura sotto data si aspetta una qualche rappresentazione testuale, se questa poi arriva da una stringa[fn::stile ~python -c "print(max($1, $2))"~ buttato lì in uno script perchè nessuno[fn::me incluso] sa usare l'algebra in bash] o dall'apertura di un file, cazzi altrui.
+ - preprocessor :: si occupa[fn::per ora] di rimuovere i commenti dal testo ricevuto, vedere poi se si vuole aggiungere un meccanismo di macro o meno.
+ - parser :: traduce la rappresentazione testuale del programma in una lista a =cons=
+ - evaluator :: esegue quanto rappresentato nella lista a =cons=
+
+La rappresentazione interna è una lista a =cons=[fn::nome tra il lispone e il fru fru per dire un albero binario], che costituisce sia la struttura sia dati fondamentale, che la rappresentazione intemedia, del nostro codice.
+Questa rappresentazione è stata scelta in quanto questa struttura dati, e questa equivalenza codice/dati, costituiscono una precentuale anche troppo alta del dna di lisp.
+
+** Parser
+l'ultima volta fare questo è stato un aborto perchè non avevo idea di cosa fosse un pda o una grammatica libera dal contesto.
+questa volta, se non riutilizzo il codice già fatto, essendo che so cos'è un pda o una grammatica libera dal contesto, questo sarà una psicosi post parto
+
+** Evaluator
+la struttura dell'evaluator è gratuitamente "ispirata" a quelle presenti in
+[[https://direct.mit.edu/books/book/2851/LISP-1-5-Programmer-s-Manual][The Lisp1.5 Programmer's Manual]], nell'introduzoine al linguaggio e in [[https://web.mit.edu/6.001/6.037/sicp.pdf][Structure and Intepretation of Computer Programs]][fn::da qui in poi anche detto =SICP=.], nel capitolo =4=, specie la sezione =4.1, The Metacircular Evaluator=.
+Queste ovviamente adattate a un ambiente più imperativo e object oriented, visto che tradurre direttamente il codice lisp in codice java porterebbe ad abominii contro la madre quel poveraccio di un Guy Steele.[fn::se questo per oltraggi a lisp[fn::di cui ha scritto lo standard(almeno per common lisp e scheme)] o java[fn::di cui ha scritto lo standard], lo decida il lettore].
+
+
+
+

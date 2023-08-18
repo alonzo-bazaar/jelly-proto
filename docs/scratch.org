@@ -1,0 +1,69 @@
+* Tokens
+** Breking tokens
+pensiamo innazitutto a come si potrebbe definire un token, potremmo definirlo come
+*** Massimale?
+#+begin_quote
+famo che un token come una sequenza massimale di caratteri o tutti speciali o tutti normali
+#+end_quote
+in questo caso una possibile implementazione sarebbe
+#+begin_src haskell
+tokens = foldr (++) [] -- put the broken twice together into a broken once
+  . map (groupBy ((==) `on` isSpecial)) -- separate special characters
+  . words -- break on whitespace
+isSpecial c = elem c "(),`'"
+#+end_src
+
+questa purtroppo non non funziona in casi quali, ad esempioo
+#+begin_src haskell
+tokens "(defun il-cazzo (che me frega) `(dio ,fregna)))"
+#+end_src
+
+si nota infatti, che il risultato di questa viene
+#+begin_src haskell
+["(","defun","il-cazzo","(","che","me","frega",")","`(","dio",",","fregna",")))"]
+#+end_src
+
+si noti soprattutto il ~"`("~ , questo non vale come token, e vorremmo separarlo nei due token ~"`"~, e ~"("~
+
+*** Logica di Break
+possiamo definire una qualche logica di break per cui, andando da sinistra a destra col classicone (un mangialiste)
+ - se stiamo "costruendo" un token speciale (se \(\exists\ x \in speciali\ t.c.\ i \text{ prefisso di } x\)) allora
+   - se il prossimo carattere continua la cosa, continua
+   - altrimenti spacca
+ - se non stamo costruendo un token speciale allora
+   - se incontri un carattere speciale allora spaccca
+   - se incontri uno spazio allora spacca
+ - se siamo su uno spazio bianco
+   - snobbalo
+
+devo dire non mi sarei mai aspettato di scrivere pseudocodice hakell con delle liste
+devo rivedere lisp sti giorni, altrimenti cazzo se divento un riso al curry[fn::noto anche come xmonad]
+
+**** Un minimo di astrazione
+ai fini di rompermi meno il cazzo con certe cose, visto che tanto la logica di break e la logica di ignoramus fanno il tokenizer, facciamo prima a specificare le due logiche, e non romperci troppo il cazzo col ficcarle l'una addosso all'altra
+
+per specificare un tokenizer solo con la logica di break/ignore eccovi una funzione idiota
+#+begin_src haskell
+  -- brk :  break, separa il primo token dal resto della stringa
+  -- ignr : ignore, ignora eventuali caratteri inutili all'inizio del resto
+  -- parecchio ad hoc
+  collectBreakIgnore :: ([a] -> ([a],[a])) -> ([a] -> [a]) -> [a] -> [[a]]
+  collectBreakIgnore _ _ [] = []
+  collectBreakIgnore brk ignr lst = let (a,b) = (brk lst)
+                                    in a : (collectBreakIgnore brk ignr (ignr b))
+#+end_src
+
+si descrive abbastanza da sola
+ecco un'implementazione di ~words~ usando questa cosa, per dare un'idea
+
+#+begin_src haskell
+words' = collectBreakIgnore (break isSpace) ignoreWhite
+  . ignoreWhite -- aggiunto per il leading whitspace
+  where ignoreWhite :: String -> String 
+        ignoreWhite = dropWhile isSpace
+#+end_src
+
+**** Applicata alla logica di break
+
+* Tree
+
