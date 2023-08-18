@@ -1,0 +1,12 @@
+* Jelly Proto
+prototype for a thing I called jelly
+
+* Note on languages
+the thing in question, as the =J= in the name implies, is in java, or at least it's gonna be in java, once I get on doing it
+
+the prototype is in haskell, because
+ - I like haskell
+ - it works well for faster prototyping
+ - the sheer amount of builtins for string manipulation
+ - type systems up the wazoo might force me not to pull a lispy
+
