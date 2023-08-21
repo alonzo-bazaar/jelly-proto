@@ -1,0 +1,29 @@
+* Le pipe
+bisogna andare da una rappresentazione testuale a un'azione, o sull'io o sullo stato interno (che ahime`, esiste)
+ - il testo può arrivare da un file o da una rappresentazione immediata, per ora chissene
+
+per andare da questa rappresentazione si passa per le seguenti fasi
+ 1. preprocessor
+ 2. tokenizer
+ 3. costruzione della rappresentazione intermedia
+ 4. esecuzione rappresentazione intermedia
+
+ognuna di queste, per adesso, sarà un package a parte.
+
+** Preprocessor
+ha il compito di
+ - ignorare i commenti
+ - espandere macro
+
+data la natura de lisp che c'ha lisp solo la prima di queste può essere effettuata con un preprocessor testuale "normale"
+la seconda sarà effettuata durante l'esecuzione del form, come primo passo di questa, visto che l'è un po' too much
+
+** Tokenizer
+al momento non è troppo documentato quindi [[http://www.catb.org/jargon/html/R/RTFS.html][rtfs]]
+
+** Costruzione rappresentazoine intermedia
+al momento non è troppo documentato quindi [[http://www.catb.org/jargon/html/R/RTFS.html][rtfs]]
+
+** Esecuzione rappresentazione intermedia
+al momento non esiste
+

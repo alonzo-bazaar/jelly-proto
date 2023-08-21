@@ -1,0 +1,4 @@
+things to be done include
+ - mechanism for ignoring comments
+ - considering strings as one token and not a ="= followed by the (tokenized) contents
+ - (optional, but highly recommended) make the code not suck
