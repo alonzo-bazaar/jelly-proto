@@ -10,3 +10,6 @@ the prototype is in haskell, because
  - the sheer amount of builtins for string manipulation
  - type systems up the wazoo might force me not to pull a lispy
 
+
+most the repo is =TeX= because most the repo is me documenting the repo to better figure out can I pull this off in java.
+(the docs are in org mode but I've pdf'd em all)
