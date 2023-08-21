@@ -7,7 +7,7 @@ famo che un token come una sequenza massimale di caratteri o tutti speciali o tu
 #+end_quote
 in questo caso una possibile implementazione sarebbe
 #+begin_src haskell
-tokens = foldr (++) [] -- put the broken twice together into a broken once
+tokens = foldr (++) [] -- take the twice nested and "flatten" into a once nested
   . map (groupBy ((==) `on` isSpecial)) -- separate special characters
   . words -- break on whitespace
 isSpecial c = elem c "(),`'"
@@ -15,19 +15,19 @@ isSpecial c = elem c "(),`'"
 
 questa purtroppo non non funziona in casi quali, ad esempioo
 #+begin_src haskell
-tokens "(defun il-cazzo (che me frega) `(dio ,fregna)))"
+tokens "(defun il-cazzo (che me frega) `(walu ,igi)))"
 #+end_src
 
 si nota infatti, che il risultato di questa viene
 #+begin_src haskell
-["(","defun","il-cazzo","(","che","me","frega",")","`(","dio",",","fregna",")))"]
+["(","defun","il-cazzo","(","che","me","frega",")","`(","walu",",","igi",")))"]
 #+end_src
 
 si noti soprattutto il ~"`("~ , questo non vale come token, e vorremmo separarlo nei due token ~"`"~, e ~"("~
 
 *** Logica di Break
 possiamo definire una qualche logica di break per cui, andando da sinistra a destra col classicone (un mangialiste)
- - se stiamo "costruendo" un token speciale (se \(\exists\ x \in speciali\ t.c.\ i \text{ prefisso di } x\)) allora
+ - se stiamo "costruendo" un token speciale (se \(\exists\ spe \in speciali\ t.c.\ spe \text{ prefisso di } sta\ cazzo\ di\ stringa\)) allora
    - se il prossimo carattere continua la cosa, continua
    - altrimenti spacca
  - se non stamo costruendo un token speciale allora
@@ -36,13 +36,14 @@ possiamo definire una qualche logica di break per cui, andando da sinistra a des
  - se siamo su uno spazio bianco
    - snobbalo
 
-devo dire non mi sarei mai aspettato di scrivere pseudocodice hakell con delle liste
+devo dire non mi sarei mai aspettato di scrivere pseudocodice hakell con delle liste,
 devo rivedere lisp sti giorni, altrimenti cazzo se divento un riso al curry[fn::noto anche come xmonad]
 
 **** Un minimo di astrazione
-ai fini di rompermi meno il cazzo con certe cose, visto che tanto la logica di break e la logica di ignoramus fanno il tokenizer, facciamo prima a specificare le due logiche, e non romperci troppo il cazzo col ficcarle l'una addosso all'altra
+ai fini di rompermi meno il cazzo con certe cose, visto che tanto la logica di break e la logica di ignoramus fanno il tokenizer, facciamo prima a specificare le due logiche, e fare un =definisciTokenizer <quella di break> <quella di ignorare>=
+così non dobbiamo romperci il cazzo a riscrivere tutto il tokenizer ogni volta che ne cambia una.
 
-per specificare un tokenizer solo con la logica di break/ignore eccovi una funzione idiota
+ai fini di fare sta cosa, eccovi una funzione /di ordine superiore/ idiota
 #+begin_src haskell
   -- brk :  break, separa il primo token dal resto della stringa
   -- ignr : ignore, ignora eventuali caratteri inutili all'inizio del resto
@@ -58,12 +59,13 @@ ecco un'implementazione di ~words~ usando questa cosa, per dare un'idea
 
 #+begin_src haskell
 words' = collectBreakIgnore (break isSpace) ignoreWhite
-  . ignoreWhite -- aggiunto per il leading whitspace
+  . ignoreWhite -- aggiunto per gestire leading whitspace
   where ignoreWhite :: String -> String 
         ignoreWhite = dropWhile isSpace
 #+end_src
 
 **** Applicata alla logica di break
+qui ho fatto troppo il =REPL=-one per documentarla bene, rtfs
 
 * Tree
-
+=Tree Be Determined=

@@ -1,0 +1,117 @@
+% Created 2023-08-21 Mon 09:55
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{Biggie Dickus}
+\date{\today}
+\title{}
+\hypersetup{
+ pdfauthor={Biggie Dickus},
+ pdftitle={},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 28.2 (Org mode 9.5.5)}, 
+ pdflang={English}}
+\begin{document}
+
+\tableofcontents
+
+\section{Tokens}
+\label{sec:orgc250f3c}
+\subsection{Breking tokens}
+\label{sec:org1186f84}
+pensiamo innazitutto a come si potrebbe definire un token, potremmo definirlo come
+\subsubsection{Massimale?}
+\label{sec:org386b0f1}
+\begin{quote}
+famo che un token come una sequenza massimale di caratteri o tutti speciali o tutti normali
+\end{quote}
+in questo caso una possibile implementazione sarebbe
+\begin{verbatim}
+tokens = foldr (++) [] -- take the twice nested and "flatten" into a once nested
+  . map (groupBy ((==) `on` isSpecial)) -- separate special characters
+  . words -- break on whitespace
+isSpecial c = elem c "(),`'"
+\end{verbatim}
+
+questa purtroppo non non funziona in casi quali, ad esempioo
+\begin{verbatim}
+tokens "(defun il-cazzo (che me frega) `(walu ,igi)))"
+\end{verbatim}
+
+si nota infatti, che il risultato di questa viene
+\begin{verbatim}
+["(","defun","il-cazzo","(","che","me","frega",")","`(","walu",",","igi",")))"]
+\end{verbatim}
+
+si noti soprattutto il \texttt{"`("} , questo non vale come token, e vorremmo separarlo nei due token \texttt{"`"}, e \texttt{"("}
+
+\subsubsection{Logica di Break}
+\label{sec:orgf85d3a6}
+possiamo definire una qualche logica di break per cui, andando da sinistra a destra col classicone (un mangialiste)
+\begin{itemize}
+\item se stiamo "costruendo" un token speciale (se \(\exists\ spe \in speciali\ t.c.\ spe \text{ prefisso di } sta\ cazzo\ di\ stringa\)) allora
+\begin{itemize}
+\item se il prossimo carattere continua la cosa, continua
+\item altrimenti spacca
+\end{itemize}
+\item se non stamo costruendo un token speciale allora
+\begin{itemize}
+\item se incontri un carattere speciale allora spaccca
+\item se incontri uno spazio allora spacca
+\end{itemize}
+\item se siamo su uno spazio bianco
+\begin{itemize}
+\item snobbalo
+\end{itemize}
+\end{itemize}
+
+devo dire non mi sarei mai aspettato di scrivere pseudocodice hakell con delle liste,
+devo rivedere lisp sti giorni, altrimenti cazzo se divento un riso al curry\footnote{noto anche come xmonad}
+
+\begin{enumerate}
+\item Un minimo di astrazione
+\label{sec:orgaa0480a}
+ai fini di rompermi meno il cazzo con certe cose, visto che tanto la logica di break e la logica di ignoramus fanno il tokenizer, facciamo prima a specificare le due logiche, e fare un \texttt{definisciTokenizer <quella di break> <quella di ignorare>}
+così non dobbiamo romperci il cazzo a riscrivere tutto il tokenizer ogni volta che ne cambia una.
+
+ai fini di fare sta cosa, eccovi una funzione \emph{di ordine superiore} idiota
+\begin{verbatim}
+-- brk :  break, separa il primo token dal resto della stringa
+-- ignr : ignore, ignora eventuali caratteri inutili all'inizio del resto
+-- parecchio ad hoc
+collectBreakIgnore :: ([a] -> ([a],[a])) -> ([a] -> [a]) -> [a] -> [[a]]
+collectBreakIgnore _ _ [] = []
+collectBreakIgnore brk ignr lst = let (a,b) = (brk lst)
+                                  in a : (collectBreakIgnore brk ignr (ignr b))
+\end{verbatim}
+
+si descrive abbastanza da sola
+ecco un'implementazione di \texttt{words} usando questa cosa, per dare un'idea
+
+\begin{verbatim}
+words' = collectBreakIgnore (break isSpace) ignoreWhite
+  . ignoreWhite -- aggiunto per gestire leading whitspace
+  where ignoreWhite :: String -> String 
+        ignoreWhite = dropWhile isSpace
+\end{verbatim}
+
+\item Applicata alla logica di break
+\label{sec:orgc7c3fcb}
+qui ho fatto troppo il \texttt{REPL}-one per documentarla bene, rtfs
+\end{enumerate}
+
+\section{Tree}
+\label{sec:orge537b53}
+\texttt{Tree Be Determined}
+\end{document}
