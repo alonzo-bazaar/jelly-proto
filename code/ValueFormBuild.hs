@@ -1,6 +1,5 @@
-module ValueFormBuild where
+module Formbuild where
 
--- temporary file that will replace Formbuild.hs once I port all the stuff
 import Tokenizer(tokens, Token, TokenList)
 import Data.List(intercalate)
 
@@ -14,6 +13,15 @@ data Value =
   | NilValue
   deriving Show
 
+{-
+list of all the toplevel forms represented by the tokenlist
+be it bare values or statements/definitions/whatever made up of conses
+-}
+forms :: TokenList -> [Value]
+forms [] = []
+forms ts = let (form, rest) = breakFirstForm ts
+           in form:(forms rest)
+
 -- del singolo token, niente cons
 tokenToValue "nil" = NilValue
 tokenToValue s | allNumeric s = IntValue (read s :: Int)
@@ -25,33 +33,22 @@ tokenToValue s | allNumeric s = IntValue (read s :: Int)
     startsWith a (b:_) = (a == b)
     removeExtremities = init . tail
 
--- dotted notation is much easier to print, and still readable
-printFormDotted :: Form -> IO ()
-printFormDotted Nil = putStr "nil"
-printFormDotted (Single token) = putStr token
-printFormDotted (Cons f1 f2) = do putStr "("
-                                  printFormDotted f1
-                                  putStr "."
-                                  printFormDotted f2
-                                  putStr ")"
 
-tokenForms :: TokenList -> [Form]
-tokenForms [] = []
-tokenForms ts = let (form, rest) = breakFirstForm ts
-                in form:(tokenForms rest)
-
-breakFirstForm :: TokenList -> (Form, TokenList)
-breakFirstForm [] = (Nil,[])
+breakFirstForm :: TokenList -> (Value, TokenList)
+breakFirstForm [] = (NilValue,[])
 breakFirstForm (")":xs) = error
   "you reduced the tokenlist wrong, this was not supposed to happen"
 breakFirstForm l@("(":xs) = let (firstToks, restToks) = breakFirstFormTokens l
-                       in (singleForm firstToks, restToks)
-                          where singleForm = listToCons
-                                  . map (fst . breakFirstForm)
-                                  . separateSubForms
-breakFirstForm (normal:xs) = (Single normal, xs)
+                            in (singleForm firstToks, restToks)
+  where singleForm = consValueUpList
+                     . map (fst . breakFirstForm)
+                     . separateSubForms
+
+breakFirstForm (normalToken:ts) = (tokenToValue normalToken, ts)
 
 {-
+the given list is a one dimensional list of "toplevel subforms", if the term makes sense
+
 the last Nil is going to be part of the input, as it was extracted as a final subform.
 this means we sould not consider [] as Nil here, as that would add an extra Nil 
 to the output list, we will instead consider [] as an error
@@ -61,12 +58,11 @@ it could be one but we'd have to purposefully ignore all trailing Nils in
 the construction of the forms, or somehow filter them out before giving the form to this
 approaches of which neither is much cleaner than this one
 -}
-listToCons :: [Form] -> Form
-listToCons [] = error "no forms"
-listToCons [Nil] = Nil -- the last nil of a sublist, this is just one nil, not two
-listToCons (a:b) = Cons a (listToCons b)
+consValueUpList :: [Value] -> Value
+consValueUpList [] = error "no forms"
+consValueUpList [NilValue] = NilValue
+consValueUpList (a:b) = ConsValue a (consValueUpList b)
 
-  
 -- we often ignore first paren of tokenlist, and mind the last one
 -- this, although mildly badly hacky, works somewhat well
 breakFirstFormTokens :: TokenList -> (TokenList, TokenList)
@@ -119,3 +115,21 @@ separateSubForms1 (")":_) = error
 
 -- non parenthesis case
 separateSubForms1 (nonParen:xs) = (nonParen:[]):(separateSubForms1 xs)
+
+--- printing utilities
+-- dotted notation is much easier to print, and still readable
+printFormDotted :: Value -> IO ()
+printFormDotted NilValue = putStr "nil"
+printFormDotted (StringValue s) = putStr $ "Str:<" ++ s ++ ">"
+printFormDotted (SymbolValue i) = putStr $ "Sym:<" ++ (show i) ++ ">"
+printFormDotted (IntValue i) = putStr $ "Int:<" ++ (show i) ++ ">"
+printFormDotted (ConsValue v1 v2) = do putStr "("
+                                       printFormDotted v1
+                                       putStr "."
+                                       printFormDotted v2
+                                       putStr ")"
+
+
+printlnFormDotted :: Value -> IO ()
+printlnFormDotted x = do printFormDotted x
+                         putStrLn ""
