@@ -43,9 +43,19 @@ startsWithSpecial str = any (\s -> s `isPrefixOf` str) specialTokenList
 -- until then, this semi imperative prolog looking shit will have to do
 tokenBreak :: String -> (String, String)
 tokenBreak [] = ("","")
+tokenBreak ('"':xs) = let (firstKinda, rest) = quoteBreak xs
+                      in ('"':firstKinda, rest)
 tokenBreak xs | startsWithSpecial xs = breakOnBiggestSpecial xs
               | otherwise = breakOnNormal xs
   where breakOnNormal xs = tokenBreakIter [] xs
+
+-- ignored first quote, now get to the second quote
+-- all these badly specialized breaking functions scream for a fucking hof
+quoteBreak ('\\':'"':xs) = let (thing, rest) = quoteBreak xs
+                           in ('\\':'"':thing, rest)
+quoteBreak ('"':xs) = ("\"",xs)
+quoteBreak (x:xs) = let(firstKinda, rest) = quoteBreak xs
+                    in (x:firstKinda, rest)
 
 breakOnBiggestSpecial :: String -> (String, String)
 breakOnBiggestSpecial xs = helper [] xs

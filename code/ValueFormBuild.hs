@@ -1,4 +1,4 @@
-module Formbuild where
+module ValueFormBuild where
 
 -- temporary file that will replace Formbuild.hs once I port all the stuff
 import Tokenizer(tokens, Token, TokenList)
@@ -14,17 +14,11 @@ data Value =
   | NilValue
   deriving Show
 
+-- del singolo token, niente cons
 tokenToValue "nil" = NilValue
 tokenToValue s | allNumeric s = IntValue (read s :: Int)
                | startsWith '"' s = StringValue $ removeExtremities s
                | otherwise = SymbolValue s
-
-forms :: TokenList -> [Value] -- mostly cons values representing forms
-forms [] = []
-forms ts = let (form, rest) = breakFirstForm ts
-       in form:(tokenForms rest)
-
-
   where
     allNumeric = all (`elem` ['0'..'9'])
     startsWith a [] = False
@@ -41,6 +35,10 @@ printFormDotted (Cons f1 f2) = do putStr "("
                                   printFormDotted f2
                                   putStr ")"
 
+tokenForms :: TokenList -> [Form]
+tokenForms [] = []
+tokenForms ts = let (form, rest) = breakFirstForm ts
+                in form:(tokenForms rest)
 
 breakFirstForm :: TokenList -> (Form, TokenList)
 breakFirstForm [] = (Nil,[])
